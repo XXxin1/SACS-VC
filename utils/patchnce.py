@@ -6,7 +6,7 @@ class PatchNCELoss(nn.Module):
     def __init__(self):
         super().__init__()
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction='none')
-        self.nce_T = 0.16
+        self.nce_T = 0.09
 
     def forward(self, feat_q, feat_k):
         B, C, S = feat_q.shape

@@ -20,32 +20,32 @@ def setup_seed(seed):
      torch.backends.cudnn.deterministic = True
 
 
-setup_seed(888)
+setup_seed(233)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-config', '-c', default='config.yaml')
     parser.add_argument('-data_dir', '-d',
-                        default='/files/xxx/VC/VCTK/VCTK-Corpus/melspectrogram_vctk_128_all/')
+                        default='/files/xxx/VC/VCTK/VCTK-Corpus/melspectrogram_vctk_128_99spk/')
     parser.add_argument('-train_set', default='train')
     parser.add_argument('-seen_set', default='test_seen')
-    parser.add_argument('-unseen_set', default='test_seen')
-    parser.add_argument('-logdir', default='./output-test-all-data-l2-0.10-t0.16/log/')
+    parser.add_argument('-unseen_set', default='test_unseen')
+    parser.add_argument('-logdir', default='./[VCTK_ONLY]rec+cvt_output-gradnorm2-t0.09-c0.5-64/log/')
     parser.add_argument('--load_model', action='store_true')
     parser.add_argument('--load_opt', action='store_true')
     parser.add_argument('--multigpus', action='store_true')
-    parser.add_argument('-store_model_path', default='./output-test-all-data-l2-0.10-t0.16/model')
-    parser.add_argument('-load_model_path', default='./output-test-all-data-l2-0.10-t0.16/model')
+    parser.add_argument('-store_model_path', default='./[VCTK_ONLY]rec+cvt_output-gradnorm2-t0.09-c0.5-64/model')
+    parser.add_argument('-load_model_path', default='./[VCTK_ONLY]rec+cvt_output-gradnorm2-t0.09-c0.5-64/model')
     parser.add_argument('-summary_steps', default=1000, type=int)
     parser.add_argument('-save_steps', default=10000, type=int)
-    parser.add_argument('-iters', default=250000, type=int)
-    parser.add_argument('-warmup_steps', default=50000, type=int)
+    parser.add_argument('-iters', default=200000, type=int)
+    parser.add_argument('-warmup_steps', default=500, type=int)
     parser.add_argument('-tag', '-t', default='init')
 
     # inference
     parser.add_argument('-sample_rate', '-sr', help='sample rate', default=22050, type=int)
     parser.add_argument('-test_batch_size', help='test audio size', default=4, type=int)
-    parser.add_argument('-store_wav_path', default='./output-test-all-data-l2-0.10-t0.16/sample')
+    parser.add_argument('-store_wav_path', default='./[VCTK_ONLY]rec+cvt_output-gradnorm2-t0.09-c0.5-64/sample')
     args = parser.parse_args()
 
     # load config file

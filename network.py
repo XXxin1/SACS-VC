@@ -155,8 +155,8 @@ class SpeakerEncoder(nn.Module):
         self.second_conv_layers = nn.ModuleList([nn.Conv1d(c_h, c_h, kernel_size=kernel_size)
                                                  for sub, _ in zip(subsample, range(n_conv_blocks))])
         
-        self.output_layer = nn.Conv1d(c_h, c_out, kernel_size=1)
         self.dropout_layer = nn.Dropout(p=dropout_rate)
+        self.output_layer = nn.Conv1d(c_h, c_out, kernel_size=1)
        
 
     def conv_blocks(self, inp):
@@ -201,8 +201,8 @@ class ContentEncoder(nn.Module):
         self.second_conv_layers = nn.ModuleList([nn.Conv1d(c_h, c_h, kernel_size=kernel_size, stride=sub)
                                                  for sub, _ in zip(subsample, range(n_conv_blocks))])
         self.norm_layer = nn.InstanceNorm1d(c_h, affine=False)
-        self.output_layer = nn.Conv1d(c_h, c_out, kernel_size=1)
         self.dropout_layer = nn.Dropout(p=dropout_rate)
+        self.output_layer = nn.Conv1d(c_h, c_out, kernel_size=1)
 
     def conv_block(self, inp):
         out = inp
@@ -212,14 +212,17 @@ class ContentEncoder(nn.Module):
             y = self.norm_layer(y)
             y = self.act(y)
             y = self.dropout_layer(y)
+            
+            if l != 0 and self.subsample[l] == 2:
+                outputs.append(y)
+                
             y = pad_layer(y, self.second_conv_layers[l])
             y = self.norm_layer(y)
             y = self.act(y)
             y = self.dropout_layer(y)
             if self.subsample[l] > 1:
                 out = F.avg_pool1d(out, kernel_size=self.subsample[l], ceil_mode=True)
-            if l != 0 and self.subsample[l] == 1:
-                outputs.append(y)
+           
             out = y + out
         return out, outputs
 
@@ -231,8 +234,8 @@ class ContentEncoder(nn.Module):
         out = self.act(out)
 
         out, outputs = self.conv_block(out)
-        output = pad_layer(out, self.output_layer)
-        outputs[-1] = output
+        out = pad_layer(out, self.output_layer)
+        outputs.append(out)
         return outputs
 
 
@@ -341,19 +344,4 @@ if __name__ == '__main__':
         pad_len += 1
 
     print(t.shape)
-    t1 = torch.rand([1, 80, 567])
-
-    l = 0
-    dis = Discriminator(config)
-    print(dis(t, classify=True)[1].shape, '---')
-    gen = Generator(config)
-    co_code = gen.content_encoder(t)
-    print(len(co_code))
-    print(co_code[0].shape)
-    print(co_code[1].shape)
-    print(co_code[2].shape)
-    print(co_code[3].shape)
-    cl_code = gen.speaker_encoder(t1)
-    xt = gen.decoder(co_code, cl_code)
-    xt = xt[:, :, :-pad_len]
-    print(xt.shape)
+   

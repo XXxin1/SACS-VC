@@ -66,7 +66,7 @@ class Audio2Mel(nn.Module):
 def convert_file(path):
     y, _ = librosa.load(path, sr=sr)
     
-    y, index = librosa.effects.trim(y, top_db=20)
+    y, index = librosa.effects.trim(y, top_db=25)
     
     y = torch.from_numpy(y)
 
@@ -104,7 +104,7 @@ def process_audios(path):
 if __name__ == "__main__":
     base_out_dir = '/files/xxx/VC/VCTK/VCTK-Corpus/'
     audio_dir = '/files/xxx/VC/VCTK/VCTK-Corpus/wav48/'
-    feat_type = 'melspectrogram_vctk_1128'
+    feat_type = 'mel_all_trim25db'
     extension = '.wav'
     peak_norm = False
 

@@ -11,12 +11,13 @@ import torch
 import numpy as np
 import yaml
 from torch.nn import functional as F
+import shutil
 
 sys.path.append("..")
 from vc_model import VCModel
 from utils.common_util import get_model_list
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 class Audio2Mel(nn.Module):
@@ -78,7 +79,7 @@ sr = 22050
 def convert_file(path, trim=False):
     y, _ = librosa.load(path, sr=22050)
     if trim:
-        y, index = librosa.effects.trim(y, top_db=20)
+        y, index = librosa.effects.trim(y, top_db=25)
 
     y = torch.from_numpy(y)
 
@@ -143,12 +144,14 @@ class Inferencer(nn.Module):
 
         origin_source_path = os.path.join(args.origin_data_dir, source_id, source_file)
         origin_target_path = os.path.join(args.origin_data_dir, target_id, target_file)
-
+        txt_path = os.path.join('/files/xxx/VC/VCTK/VCTK-Corpus/txt/', source_id, source_file[:-4] + '.txt')
         sub = source_ + '_' + target_
         this_model = self.model
         src_mel = source_mel.cuda()
         tgt_mel = target_mel.cuda()
         xr_current, xt_current, xr, xt = this_model.inference(src_mel, tgt_mel)
+        
+  
         xt = self.vocoder_inverse(xt)
         src = self.vocoder_inverse(src_mel)
         tgt = self.vocoder_inverse(tgt_mel)
@@ -161,14 +164,16 @@ class Inferencer(nn.Module):
         self.write_wav_to_file(xt, sub, 'converted_proposed.wav', self.args.sample_rate)
 
         origin_source_audio, index = librosa.effects.trim(
-            librosa.load(os.path.join(origin_source_path), sr=48000)[0], top_db=20)
+            librosa.load(os.path.join(origin_source_path), sr=48000)[0], top_db=25)
         origin_target_audio, index = librosa.effects.trim(
-            librosa.load(os.path.join(origin_target_path), sr=48000)[0], top_db=20)
+            librosa.load(os.path.join(origin_target_path), sr=48000)[0], top_db=25)
 
         sf.write(os.path.join(self.args.store_wav_path, sub, 'origin_source_' + source_file), origin_source_audio,
                  48000)
         sf.write(os.path.join(self.args.store_wav_path, sub, 'origin_target_' + target_file), origin_target_audio,
                  48000)
+        if os.path.exists(txt_path):
+            shutil.copy(txt_path, os.path.join(self.args.store_wav_path, sub, os.path.basename(txt_path)))
 
         return
 
@@ -178,17 +183,18 @@ if __name__ == '__main__':
     parser.add_argument('-config', '-c', default='./config.yaml')
     parser.add_argument('-load_model_path',
                         # default='./---output---/model')
-                        default='./output-test-all-data-l2-0.10-t0.16/model')
-                        # default='/files/xxx/VC/speaker-attention-vc-all/U-Net-nonparallel/output/model')
+                        # default='./[VCTK_ONLY]output-test-all-data-l2x1-t0.07-nosmooth-norandompatch-nowarmup-wd1e-4-gan0.02/model')
+                        default='/files/xxx/VC/SACS-VC/methodology_rec/[*]20w-0.775-wer25.5[VCTK_ONLY]rec+cvt_output-gradnorm3-t0.09-c0.5-32/model')
     parser.add_argument('-test_file', '-s',
-                        default='/files/xxx/VC/speaker-attention-vc-all/speechmetrics/objective_evaluation_male2male.json')
-    parser.add_argument('-origin_data_dir', '-o', default='/files/xxx/VC/VCTK/VCTK-Corpus/wav48/')
+                        default='/home/xxx/experiments_SACS/sample_pairs/unseen_vctk_m2m.json')
+                        #default='/home/xxx/experiments_SACS/sample_pairs/cmu_f2m_parallel.json')
+    parser.add_argument('-origin_data_dir', '-o', default='/files/xxx/VC/VCTK/VCTK-Corpus/wav48')
     parser.add_argument('-sample_rate', '-sr', help='sample rate', default=22050, type=int)
-    parser.add_argument('-store_wav_path', default='inference/output-test-all-data-l2-0.10-t0.16/m2m')
+    parser.add_argument('-store_wav_path', default='inference-0.09/unseen_vctk_m2m')
     args = parser.parse_args()
     # load config file
     with open(args.config) as f:
-        config = yaml.load(f)
+        config = yaml.load(f)  
     inferencer = Inferencer(config=config, args=args).cuda()
 
     with open(os.path.join(args.test_file), 'r') as f:
@@ -206,3 +212,4 @@ if __name__ == '__main__':
         target_mel = torch.from_numpy(convert_file(target_wav_path, trim=True))
         target_mel = target_mel.unsqueeze(0)
         inferencer.inference_from_mel(source_mel, source_file, target_mel, target_file)
+      

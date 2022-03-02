@@ -35,22 +35,26 @@ class VCModel(nn.Module):
           
             
             c_xt = self.gen.content_encoder(xt)
+            c_xr = self.gen.content_encoder(xr)
             l_nce = 0.0
-            feat_k, sample_ids = random_sample_patches(c_xa)
-            feat_q, _ = random_sample_patches(c_xt, patch_ids = sample_ids)
+            feat_k = normalize_patches(c_xa)
+            feat_q = normalize_patches(c_xt)
+            feat_q_ = normalize_patches(c_xr)
             
-            for f_q, f_k in zip(feat_q, feat_k):
-               loss = self.criterionNCE(f_q, f_k).mean()
-               l_nce += loss
+            for f_q, f_q_, f_k in zip(feat_q, feat_q_, feat_k):
+               loss1 = self.criterionNCE(f_q, f_k).mean()
+               loss2 = self.criterionNCE(f_q_, f_k).mean()
+               l_nce += loss1
+               l_nce += loss2
             
             
             l_nce = l_nce / 4 * self.config['lambda']['nce_w']
-            l_content = multi_recon_criterion_l2(c_xt, c_xa) * self.config['lambda']['c_w']
+            l_content = (multi_recon_criterion_l2(c_xt, c_xa) + multi_recon_criterion_l2(c_xr, c_xa)) * self.config['lambda']['c_w']
             # print(l_content)
            
-            l_x_rec = self.config['lambda']['r_w'] * smooth_l1_loss(xr, xa)
+            l_x_rec = self.config['lambda']['r_w'] * recon_criterion(xr, xa)
             l_adv = self.config['lambda']['gan_w'] * l_adv_t
-            l_total = (l_adv + l_x_rec  + l_nce + l_content)
+            l_total = (l_adv + l_x_rec  + l_content+ l_nce)
             
             l_total.backward()
             grad_clip([self.gen], self.config['lambda']['max_grad_norm'])

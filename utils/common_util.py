@@ -41,7 +41,7 @@ def multi_recon_criterion_l2(predict, target):
 def padding_for_inference(inp):
     pad_len = 0
     while ceil(inp.shape[-1] / 4) % 2 != 0 or ceil(inp.shape[-1] / 2) % 2 != 0 or ceil(inp.shape[-1]) % 2 != 0:
-        inp = F.pad(inp, [0, 1], 'reflect')
+        inp = F.pad(inp, [0, 1], 'constant')
         pad_len += 1
     return inp, pad_len
 
@@ -131,15 +131,12 @@ def random_sample_patches(feats, num_patches=128, patch_ids=None):
         
     return return_feats, return_ids 
         
-class Normalize(nn.Module):
-    def __init__(self, power=2):
-        super(Normalize, self).__init__()
-        self.power = power
-
-    def forward(self, x):
-        norm = x.pow(self.power).sum(1, keepdim=True).pow(1. / self.power)
-        out = x.div(norm)
-        return out 
+def normalize_patches(feats):
+    return_feats = []
+    for feat_id, feat in enumerate(feats):       
+        return_feats.append(F.normalize(feat, dim=1, p=2))
+    return return_feats
+        
         
 
 def get_cosine_schedule_with_warmup(
@@ -171,7 +168,7 @@ def get_cosine_schedule_with_warmup(
 
     def lr_lambda(current_step):
         if current_step < num_warmup_steps:
-           return 1
+            return float(current_step) / float(max(1, num_warmup_steps))
         progress = float(current_step - num_warmup_steps) / float(
             max(1, num_training_steps - num_warmup_steps)
         )
@@ -180,7 +177,6 @@ def get_cosine_schedule_with_warmup(
         )
 
     return LambdaLR(optimizer, lr_lambda, last_epoch)
-
 
 class Logger(object):
     def __init__(self, logdir='./log'):
